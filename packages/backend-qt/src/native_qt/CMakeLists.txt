@@ -12,9 +12,8 @@ pybind11_add_module(_native_qt MODULE ${CMAKE_CURRENT_SOURCE_DIR}/src/native_qt.
 target_link_libraries(_native_qt PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
 
 set_target_properties(_native_qt PROPERTIES
-  LIBRARY_OUTPUT_DIRECTORY "${NFD_PACKAGE_DIR}"
-  RUNTIME_OUTPUT_DIRECTORY "${NFD_PACKAGE_DIR}"
   PREFIX ""
   OUTPUT_NAME "_native_qt"
 )
-install(TARGETS _native_qt LIBRARY DESTINATION .)
+install(TARGETS _native_qt LIBRARY DESTINATION native_file_dialog_qt)
+install(FILES "${CMAKE_SOURCE_DIR}/src/native_file_dialog_qt/__init__.py" DESTINATION native_file_dialog_qt)

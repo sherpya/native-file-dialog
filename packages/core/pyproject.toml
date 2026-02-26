@@ -1,0 +1,20 @@
+[project]
+name = "native-file-dialog"
+dynamic = ["version"]
+requires-python = ">=3.11"
+dependencies = [
+  "native-file-dialog-gtk; sys_platform == 'linux'",
+  "native-file-dialog-qt; sys_platform == 'linux'",
+]
+
+[tool.hatch.version]
+source = "regex"
+path = "VERSION"
+pattern = "^(?P<version>.+)$"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/native_file_dialog"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

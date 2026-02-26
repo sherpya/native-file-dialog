@@ -1,112 +1,84 @@
-# native-file-dialog
+# native-file-dialog monorepo
 
-A Python library for native file dialogs (open, save, multiple selection, directory picker),
-with a single API across platforms.
+This repository builds and publishes three packages:
 
-## Features
+- `native-file-dialog` (core pure Python API and fallback logic)
+- `native-file-dialog-gtk` (Linux GTK backend extension)
+- `native-file-dialog-qt` (Linux Qt backend extension)
 
-- **Linux**: Qt6 or GTK4/libadwaita native extensions (chosen via `XDG_CURRENT_DESKTOP`), with tkinter fallback
-- **Windows**: ctypes (`GetOpenFileNameW` / `GetSaveFileNameW` / `SHBrowseForFolderW`) — no external dependencies
-- **macOS**: osascript (AppleScript) or optional PyObjC
+Installing `native-file-dialog` on Linux pulls both backend distributions through
+platform markers. On macOS and Windows, only core dependencies are installed.
 
-## Installation
+## Runtime behavior
+
+`native_file_dialog` keeps the same backend resolution behavior:
+
+- Linux: try Qt/GTK by desktop preference and fall back to tkinter
+- macOS: PyObjC then osascript fallback
+- Windows: win32 backend
+
+If a Linux native backend is not installed or fails to import, fallback selection
+continues and tkinter remains the final fallback.
+
+## Repository layout
+
+- `packages/core`
+- `packages/backend-gtk`
+- `packages/backend-qt`
+- `docker/gtk.Dockerfile`
+- `docker/qt.Dockerfile`
+- `.github/workflows/release.yml`
+- `VERSION`
+
+## Build backend wheels with Docker (Linux)
+
+GTK:
 
 ```bash
-pip install native-file-dialog
+docker build -f docker/gtk.Dockerfile -t nfd-gtk .
+docker run --rm -v $PWD/packages/backend-gtk:/project nfd-gtk python3 -m build
 ```
 
-Optional platform-specific dependencies:
-
-- **macOS** (more native): `pip install pyobjc-framework-Cocoa pyobjc-framework-uniformtypeidentifiers`
-
-On **Linux**, the Qt and GTK extensions are built only when compiling from source on Linux. Build dependencies (e.g. Debian/Ubuntu):
+Qt:
 
 ```bash
-# Qt6 extension
-sudo apt install qt6-base-dev
-
-# GTK4 extension
-sudo apt install libgtk-4-dev libadwaita-1-dev
-
-# Build (e.g. with uv)
-uv pip install -e .
+docker build -f docker/qt.Dockerfile -t nfd-qt .
+docker run --rm -v $PWD/packages/backend-qt:/project nfd-qt python3 -m build
 ```
 
-## Usage
+## Core package usage
 
 ```python
 import native_file_dialog
 
-# Single file
-path = native_file_dialog.open_file(
-    title='Choose a file',
-    initialdir='/home/user',
-    filters=[('Python Files', '*.py'), ('Markdown Files', '*.md')],
-)
-if path:
-    print(path)
-
-# Multiple files
-paths = native_file_dialog.open_multiple(
-    title='Choose files',
-    filters=[('Python Files', '*.py'), ('All', '*')],
-)
-print(paths)
-
-# Save file
-path = native_file_dialog.save_file(title='Save as', initialdir='/home/user')
-if path:
-    print(path)
-
-# Choose directory
-directory = native_file_dialog.open_directory(
-    title='Select a folder',
-    initialdir='/home/user',
-)
-if directory:
-    print(directory)
+path = native_file_dialog.open_file(title="Choose a file")
+print(path)
 ```
 
-### Filter format
+## Local development
 
-`filters` is a list of `(description, pattern)` tuples:
+When working on the monorepo locally, `uv`’s resolver cannot see the unpublished
+`native-file-dialog` / `native-file-dialog-gtk` / `native-file-dialog-qt`
+packages in any index, so you should install them as editables **without**
+resolving dependencies from PyPI.
 
-```python
-filters=[
-    ('Python files', '*.py'),
-    ('Markdown files', '*.md'),
-    ('All files', '*'),
-]
+From the repository root, with a virtual environment activated:
+
+```bash
+# Core package (pure Python)
+uv pip install -e packages/core --no-deps
+
+# Linux backends (build native extensions once)
+uv pip install -e packages/backend-gtk --no-deps
+uv pip install -e packages/backend-qt --no-deps
 ```
 
-## Forcing a backend
+After this you can import and use the library as usual:
 
-You can skip autodetect and force a backend with the optional `backend` parameter:
-
-```python
-# Force GTK (Linux)
-path = native_file_dialog.open_file(backend='gtk')
-
-# Force Qt/KDE (Linux)
-path = native_file_dialog.open_file(backend='qt')
-
-# Force tkinter (any platform)
-path = native_file_dialog.open_file(backend='tk')
+```bash
+python -c "import native_file_dialog; print(native_file_dialog.open_file)"
 ```
-
-Valid values: `'gtk'`, `'qt'` (Linux only), `'pyobc'`, `'osascript'` (macOS only), `'tk'` (any platform).
-
-## Linux backend selection (autodetect)
-
-On Linux, when `backend` is not set, the backend is chosen from `XDG_CURRENT_DESKTOP`:
-
-- **KDE**: try Qt extension first, then GTK, then tkinter
-- **GNOME** (and similar): try GTK first, then Qt, then tkinter
-- **Other**: try Qt first, then GTK, then tkinter
-
-If an extension fails to load (e.g. missing libraries), the next backend is tried;
-tkinter is always used as fallback.
 
 ## License
 
-MIT. See [LICENSE](LICENSE) for details.
+MIT. See `LICENSE` for details.

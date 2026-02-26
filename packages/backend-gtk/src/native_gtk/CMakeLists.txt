@@ -26,10 +26,9 @@ target_link_libraries(_native_gtk PRIVATE
 target_compile_options(_native_gtk PRIVATE ${GTK4_CFLAGS_OTHER} ${ADW_CFLAGS_OTHER})
 
 set_target_properties(_native_gtk PROPERTIES
-  LIBRARY_OUTPUT_DIRECTORY "${NFD_PACKAGE_DIR}"
-  RUNTIME_OUTPUT_DIRECTORY "${NFD_PACKAGE_DIR}"
   PREFIX ""
   OUTPUT_NAME "_native_gtk"
   SUFFIX "${CMAKE_SHARED_MODULE_SUFFIX}"
 )
-install(TARGETS _native_gtk LIBRARY DESTINATION .)
+install(TARGETS _native_gtk LIBRARY DESTINATION native_file_dialog_gtk)
+install(FILES "${CMAKE_SOURCE_DIR}/src/native_file_dialog_gtk/__init__.py" DESTINATION native_file_dialog_gtk)
