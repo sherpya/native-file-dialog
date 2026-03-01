@@ -17,17 +17,14 @@ def get_root() -> tk.Tk:
     return root
 
 
-def open_file(title: str | None = None, initialdir: str | None = None, filters: FilterSpec | None = None) -> str | None:
+def open_file(title: str | None = None, initialdir: str | None = None,
+              filters: FilterSpec | None = None, multiple: bool = False) -> List[str] | None:
     get_root()
-    return filedialog.askopenfilename(title=title, initialdir=initialdir, filetypes=filters or []) or None
-
-
-def open_multiple(title: str | None = None,
-                  initialdir: str | None = None,
-                  filters: FilterSpec | None = None) -> List[str]:
-    get_root()
-    paths = filedialog.askopenfilenames(title=title, initialdir=initialdir, filetypes=filters or [])
-    return list(paths) if paths else []
+    if multiple:
+        paths = filedialog.askopenfilenames(title=title, initialdir=initialdir, filetypes=filters or [])
+        return list(paths) if paths else None
+    path = filedialog.askopenfilename(title=title, initialdir=initialdir, filetypes=filters or [])
+    return [path] if path else None
 
 
 def save_file(title: str | None = None, initialdir: str | None = None) -> str | None:

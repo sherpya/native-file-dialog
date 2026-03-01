@@ -1,7 +1,7 @@
 """
 native_file_dialog: native open/save file dialogs (single and multiple selection).
 
-Uses Qt or GTK on Linux (via XDG_CURRENT_DESKTOP), PyWin32 on Windows,
+Uses Qt or GTK on Linux (via XDG_CURRENT_DESKTOP), ctypes on Windows,
 osascript or PyObjC on macOS, with tkinter fallback.
 """
 
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     FilterSpec: TypeAlias = List[Tuple[str, str]]
     Backend: TypeAlias = Literal['tk', 'qt', 'gtk', 'pyobjc', 'osascript']
 
-__all__ = ['open_file', 'open_multiple', 'save_file', 'open_directory']
+__all__ = ['open_file', 'save_file', 'open_directory']
 
 package = 'native_file_dialog.backends'
 
@@ -57,9 +57,8 @@ def get_backend():
 
 def resolve_backend(override: Backend | None = None):
     """
-    Resolve backend: if backend_override is 'gtk', 'qt', 'pyobjc', 'osascript', 'tk',
-    use that backend (gtk/qt only on Linux; pyobj/osascript on macOS, tk on any platform).
-    Otherwise, autodetect.
+    Resolve backend: if override is 'gtk', 'qt', 'pyobjc', 'osascript', 'tk',
+    use that backend. Otherwise, autodetect.
     """
     if not override:
         return get_backend()
@@ -83,55 +82,36 @@ def resolve_backend(override: Backend | None = None):
 
 
 def open_file(title: str | None = None, initialdir: PathLike | None = None, filters: FilterSpec | None = None,
-              backend: Backend | None = None) -> str | None:
+              multiple: bool = False, backend: Backend | None = None) -> List[str] | None:
     """
-    Open a file selection dialog for a single file.
+    Open a file selection dialog.
 
     :param title: Dialog title (default backend-specific).
     :param initialdir: Initial directory.
     :param filters: List of (description, pattern) tuples, e.g. [('Python', '*.py')].
+    :param multiple: If True, allow selecting multiple files.
     :param backend: Force backend: 'gtk', 'qt' (Linux), 'pyobjc', 'osascript' (macOS), or 'tk' (any platform).
-    :return: Selected file path or None if cancelled.
+    :return: List of selected paths, or None if cancelled. Single selection returns [path].
     """
     backend_module = resolve_backend(backend)
     if initialdir is not None:
         initialdir = os.fspath(initialdir)
-    return backend_module.open_file(title=title or '', initialdir=initialdir or '.', filters=filters)
-
-
-def open_multiple(title: str | None = None, initialdir: PathLike | None = None, filters: FilterSpec | None = None,
-                  backend: Backend | None = None) -> List[str]:
-    """
-    Open a file selection dialog for multiple files.
-
-    :param title: Dialog title.
-    :param initialdir: Initial directory.
-    :param filters: Same as open_file.
-    :param backend: Force backend: 'gtk', 'qt' (Linux), 'pyobjc', 'osascript' (macOS), or 'tk' (any platform).
-    :return: List of selected paths (empty if cancelled).
-    """
-    backend_module = resolve_backend(backend)
-
-    if initialdir is not None:
-        initialdir = os.fspath(initialdir)
-
-    return backend_module.open_multiple(title=title or '', initialdir=initialdir or '.', filters=filters)
+    return backend_module.open_file(title=title or '', initialdir=initialdir or '.', filters=filters, multiple=multiple)
 
 
 def save_file(title: str | None = None, initialdir: PathLike | None = None,
-              backend: Backend | None = None, ) -> str | None:
+              backend: Backend | None = None) -> str | None:
     """
     Open a save file dialog.
 
     :param title: Dialog title.
     :param initialdir: Initial directory.
-    :param backend: Force backend: 'gtk', 'qt' (Linux), or 'tk' (any platform).
+    :param backend: Force backend: 'gtk', 'qt' (Linux), 'pyobjc', 'osascript' (macOS), or 'tk' (any platform).
     :return: Selected path or None if cancelled.
     """
     backend_module = resolve_backend(backend)
     if initialdir is not None:
         initialdir = os.fspath(initialdir)
-
     return backend_module.save_file(title=title or '', initialdir=initialdir or '.')
 
 

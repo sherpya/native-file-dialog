@@ -128,37 +128,28 @@ def _make_ofn(title: str | None, initialdir: str | None, filters: FilterSpec | N
 
 
 def open_file(title: str | None = None, initialdir: str | None = None,
-              filters: FilterSpec | None = None) -> str | None:
+              filters: FilterSpec | None = None, multiple: bool = False) -> List[str] | None:
     buf = create_unicode_buffer(MAX_PATH_BUF)
-    ofn = _make_ofn(title or 'Choose a file', initialdir, filters, buf,
-                    OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR)
+    flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR
+    if multiple:
+        flags |= OFN_ALLOWMULTISELECT
+    default_title = 'Choose one or more files' if multiple else 'Choose a file'
+    ofn = _make_ofn(title or default_title, initialdir, filters, buf, flags)
 
     if not _comdlg32.GetOpenFileNameW(byref(ofn)):
         return None
 
-    return buf.value or None
+    if multiple:
+        raw = ctypes.wstring_at(buf, MAX_PATH_BUF)
+        parts = [p for p in raw.split('\x00') if p]
+        if not parts:
+            return None
+        if len(parts) == 1:
+            return [parts[0]]
+        directory = parts[0]
+        return [os.path.join(directory, f) for f in parts[1:]]
 
-
-def open_multiple(title: str | None = None, initialdir: str | None = None,
-                  filters: FilterSpec | None = None) -> List[str]:
-    buf = create_unicode_buffer(MAX_PATH_BUF)
-    ofn = _make_ofn(title or 'Choose one or more files', initialdir, filters, buf,
-                    OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT | OFN_NOCHANGEDIR)
-    if not _comdlg32.GetOpenFileNameW(byref(ofn)):
-        return []
-
-    raw = ctypes.wstring_at(buf, MAX_PATH_BUF)
-    parts = raw.split('\x00')
-    parts = [p for p in parts if p]
-
-    if not parts:
-        return []
-
-    if len(parts) == 1:
-        return [parts[0]]
-
-    directory = parts[0]
-    return [os.path.join(directory, f) for f in parts[1:]]
+    return [buf.value] if buf.value else None
 
 
 def save_file(title: str | None = None, initialdir: str | None = None) -> str | None:

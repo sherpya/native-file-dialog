@@ -51,8 +51,24 @@ docker run --rm -v $PWD/packages/backend-qt:/project nfd-qt python3 -m build
 ```python
 import native_file_dialog
 
-path = native_file_dialog.open_file(title="Choose a file")
+# Single file selection (returns [path] or None)
+paths = native_file_dialog.open_file(title="Choose a file")
+if paths:
+    print(paths[0])
+
+# Multiple file selection (returns [path1, ...] or None)
+paths = native_file_dialog.open_file(title="Choose files", multiple=True)
+if paths:
+    for p in paths:
+        print(p)
+
+# Save file
+path = native_file_dialog.save_file(title="Save as")
 print(path)
+
+# Directory selection
+directory = native_file_dialog.open_directory(title="Select a folder")
+print(directory)
 ```
 
 ## Local development

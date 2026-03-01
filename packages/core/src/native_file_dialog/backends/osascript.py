@@ -21,24 +21,6 @@ def _escape_applescript(s: str) -> str:
     return s.replace('\\', '\\\\').replace('"', '\\"')
 
 
-def open_file(title: str | None = None, initialdir: str | None = None, filters=None) -> str | None:
-    opts = []
-
-    if title:
-        opts.append(f'with prompt "{_escape_applescript(title)}"')
-
-    if initialdir:
-        opts.append(f'default location (POSIX file "{_escape_applescript(initialdir)}")')
-
-    script = 'POSIX path of (choose file' + (' ' + ' '.join(opts) if opts else '') + ')'
-
-    try:
-        out = run_applescript(script)
-        return out if out else None
-    except SubprocessError:
-        return None
-
-
 OPEN_MULTIPLE_SCRIPT = """set AppleScript's text item delimiters to ASCII character 10
 set L to choose file {}
 set pathList to {{}}
@@ -50,8 +32,12 @@ set AppleScript's text item delimiters to ""
 return out"""
 
 
-def open_multiple(title: str | None = None, initialdir: str | None = None, filters=None) -> List[str]:
-    opts = ['with multiple selections allowed']
+def open_file(title: str | None = None, initialdir: str | None = None,
+              filters=None, multiple: bool = False) -> List[str] | None:
+    opts = []
+
+    if multiple:
+        opts.append('with multiple selections allowed')
 
     if title:
         opts.append(f'with prompt "{_escape_applescript(title)}"')
@@ -59,13 +45,22 @@ def open_multiple(title: str | None = None, initialdir: str | None = None, filte
     if initialdir:
         opts.append(f'default location (POSIX file "{_escape_applescript(initialdir)}")')
 
+    if multiple:
+        try:
+            out = run_applescript(OPEN_MULTIPLE_SCRIPT.format(' '.join(opts)))
+            if not out:
+                return None
+            paths = [p.strip() for p in out.split('\n') if p.strip()]
+            return paths if paths else None
+        except SubprocessError:
+            return None
+
+    script = 'POSIX path of (choose file' + (' ' + ' '.join(opts) if opts else '') + ')'
     try:
-        out = run_applescript(OPEN_MULTIPLE_SCRIPT.format(' '.join(opts)))
-        if not out:
-            return []
-        return [p.strip() for p in out.split('\n') if p.strip()]
+        out = run_applescript(script)
+        return [out] if out else None
     except SubprocessError:
-        return []
+        return None
 
 
 def save_file(title: str | None = None, initialdir: str | None = None) -> str | None:

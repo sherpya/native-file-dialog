@@ -23,14 +23,12 @@ def filter_to_qt_string(filters: FilterSpec | None = None) -> str:
 
 
 def open_file(title: str | None = None, initialdir: str | None = None,
-              filters: FilterSpec | None = None) -> str | None:
+              filters: FilterSpec | None = None, multiple: bool = False) -> List[str] | None:
+    if multiple:
+        result = _open_multiple(title or '', initialdir or '', filter_to_qt_string(filters))
+        return result if result else None
     result = _open_file(title or '', initialdir or '', filter_to_qt_string(filters))
-    return result if result is not None else None
-
-
-def open_multiple(title: str | None = None, initialdir: str | None = None,
-                  filters: FilterSpec | None = None) -> List[str]:
-    return _open_multiple(title or '', initialdir or '', filter_to_qt_string(filters))
+    return [result] if result is not None else None
 
 
 def save_file(title: str | None = None, initialdir: str | None = None) -> str | None:

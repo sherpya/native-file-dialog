@@ -20,17 +20,18 @@ def filter_to_ut_types(filter_spec: FilterSpec) -> List[UTType]:
     ut_types = []
     for _, pattern in filter_spec:
         if pattern.startswith('*.'):
-            ext = pattern[2:]  # 'py', 'md'
+            ext = pattern[2:]
             if ut_type := UTType.typeWithFilenameExtension_(ext):
                 ut_types.append(ut_type)
     return ut_types
 
 
-def open_file(title: str | None = None, initialdir: str | None = None, filters: FilterSpec | None = None) -> str | None:
+def open_file(title: str | None = None, initialdir: str | None = None,
+              filters: FilterSpec | None = None, multiple: bool = False) -> List[str] | None:
     panel = NSOpenPanel.openPanel()
     panel.setCanChooseFiles_(True)
     panel.setCanChooseDirectories_(False)
-    panel.setAllowsMultipleSelection_(False)
+    panel.setAllowsMultipleSelection_(multiple)
 
     if title:
         panel.setTitle_(title)
@@ -40,7 +41,6 @@ def open_file(title: str | None = None, initialdir: str | None = None, filters: 
 
     if filters:
         types = filter_to_ut_types(filters)
-        print(types)
         panel.setAllowedContentTypes_(types)
 
     if panel.runModal() != 1:
@@ -49,35 +49,10 @@ def open_file(title: str | None = None, initialdir: str | None = None, filters: 
     urls = panel.URLs()
     if not urls or urls.count() == 0:
         return None
-    return urls[0].path()
 
-
-def open_multiple(title: str | None = None,
-                  initialdir: str | None = None,
-                  filters: FilterSpec | None = None) -> List[str]:
-    panel = NSOpenPanel.openPanel()
-    panel.setCanChooseFiles_(True)
-    panel.setCanChooseDirectories_(False)
-    panel.setAllowsMultipleSelection_(True)
-
-    if title:
-        panel.setTitle_(title)
-
-    if initialdir:
-        panel.setDirectoryURL_(NSURL.fileURLWithPath_(initialdir))
-
-    if filters:
-        types = filter_to_ut_types(filters)
-        panel.setAllowedContentTypes_(types)
-
-    if panel.runModal() != 1:
-        return []
-
-    urls = panel.URLs()
-    if not urls:
-        return []
-
-    return [url.path() for url in urls]
+    if multiple:
+        return [url.path() for url in urls]
+    return [urls[0].path()]
 
 
 def save_file(title: str | None = None, initialdir: str | None = None) -> str | None:
