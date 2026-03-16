@@ -10,10 +10,9 @@ import os
 from ctypes import (
     POINTER, Structure, byref, c_void_p, c_wchar_p, create_unicode_buffer, sizeof,
 )
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
-    from typing import List
     from .. import FilterSpec
 
 # comdlg32: GetOpenFileNameW / GetSaveFileNameW
@@ -56,7 +55,7 @@ class OPENFILENAMEW(Structure):
     ]
 
 
-_comdlg32 = ctypes.windll.comdlg32
+_comdlg32 = ctypes.windll.comdlg32  # type: ignore[attr-defined]
 _comdlg32.GetOpenFileNameW.argtypes = [POINTER(OPENFILENAMEW)]
 _comdlg32.GetOpenFileNameW.restype = wt.BOOL
 _comdlg32.GetSaveFileNameW.argtypes = [POINTER(OPENFILENAMEW)]
@@ -68,7 +67,7 @@ BIF_RETURNONLYFSDIRS = 0x00000001
 BIF_NEWDIALOGSTYLE = 0x00000040
 BIF_EDITBOX = 0x00000010
 
-BFFCALLBACK = ctypes.WINFUNCTYPE(ctypes.c_int, wt.HWND, ctypes.c_uint, c_void_p, c_void_p)
+BFFCALLBACK = ctypes.WINFUNCTYPE(ctypes.c_int, wt.HWND, ctypes.c_uint, c_void_p, c_void_p)  # type: ignore[attr-defined]
 BFFM_INITIALIZED = 1
 BFFM_SETSELECTION = 0x0467  # WM_USER + 103, Unicode variant
 
@@ -86,13 +85,13 @@ class BROWSEINFOW(Structure):
     ]
 
 
-_shell32 = ctypes.windll.shell32
+_shell32 = ctypes.windll.shell32  # type: ignore[attr-defined]
 _shell32.SHBrowseForFolderW.argtypes = [POINTER(BROWSEINFOW)]
 _shell32.SHBrowseForFolderW.restype = c_void_p
 _shell32.SHGetPathFromIDListW.argtypes = [c_void_p, ctypes.POINTER(wt.WCHAR)]
 _shell32.SHGetPathFromIDListW.restype = wt.BOOL
 
-_ole32 = ctypes.windll.ole32
+_ole32 = ctypes.windll.ole32  # type: ignore[attr-defined]
 _ole32.CoTaskMemFree.argtypes = [c_void_p]
 _ole32.CoTaskMemFree.restype = None
 
@@ -152,9 +151,10 @@ def open_file(title: str | None = None, initialdir: str | None = None,
     return [buf.value] if buf.value else None
 
 
-def save_file(title: str | None = None, initialdir: str | None = None) -> str | None:
+def save_file(title: str | None = None, initialdir: str | None = None,
+              filters: FilterSpec | None = None) -> str | None:
     buf = create_unicode_buffer(MAX_PATH_BUF)
-    ofn = _make_ofn(title or 'Save file', initialdir, None, buf,
+    ofn = _make_ofn(title or 'Save file', initialdir, filters, buf,
                     OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR)
     if not _comdlg32.GetSaveFileNameW(byref(ofn)):
         return None

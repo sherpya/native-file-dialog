@@ -5,21 +5,12 @@ from typing import TYPE_CHECKING, List
 if TYPE_CHECKING:
     from .. import FilterSpec
 
-# Try GTK4 first, fall back to GTK3.
-try:
-    from native_file_dialog_gtk import (
-        open_file as _open_file,
-        open_multiple as _open_multiple,
-        save_file as _save_file,
-        open_directory as _open_directory,
-    )
-except ImportError:
-    from native_file_dialog_gtk3 import (
-        open_file as _open_file,
-        open_multiple as _open_multiple,
-        save_file as _save_file,
-        open_directory as _open_directory,
-    )
+from native_file_dialog_gtk3 import (
+    open_file as _open_file,
+    open_multiple as _open_multiple,
+    save_file as _save_file,
+    open_directory as _open_directory,
+)
 
 
 def filter_to_gtk_string(filters: FilterSpec | None = None) -> List[str]:

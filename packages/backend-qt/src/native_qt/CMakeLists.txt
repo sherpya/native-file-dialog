@@ -16,4 +16,8 @@ set_target_properties(_native_qt PROPERTIES
   OUTPUT_NAME "_native_qt"
 )
 install(TARGETS _native_qt LIBRARY DESTINATION native_file_dialog_qt)
-install(FILES "${CMAKE_SOURCE_DIR}/src/native_file_dialog_qt/__init__.py" DESTINATION native_file_dialog_qt)
+install(FILES
+  "${CMAKE_SOURCE_DIR}/src/native_file_dialog_qt/__init__.py"
+  "${CMAKE_SOURCE_DIR}/src/native_file_dialog_qt/_native_qt.pyi"
+  "${CMAKE_SOURCE_DIR}/src/native_file_dialog_qt/py.typed"
+  DESTINATION native_file_dialog_qt)

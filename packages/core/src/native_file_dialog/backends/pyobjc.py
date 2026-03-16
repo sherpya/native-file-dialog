@@ -4,15 +4,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from .. import FilterSpec
-    from typing import List
 
 from AppKit import NSOpenPanel, NSSavePanel  # type: ignore
 from Foundation import NSURL  # type: ignore
-from UniformTypeIdentifiers import UTType  # type: ignore[import-untyped]
+from UniformTypeIdentifiers import UTType  # type: ignore[import-not-found]
 
 
 def filter_to_ut_types(filter_spec: FilterSpec) -> List[UTType]:
@@ -55,7 +54,8 @@ def open_file(title: str | None = None, initialdir: str | None = None,
     return [urls[0].path()]
 
 
-def save_file(title: str | None = None, initialdir: str | None = None) -> str | None:
+def save_file(title: str | None = None, initialdir: str | None = None,
+              filters: FilterSpec | None = None) -> str | None:
     panel = NSSavePanel.savePanel()
 
     if title:
@@ -63,6 +63,10 @@ def save_file(title: str | None = None, initialdir: str | None = None) -> str | 
 
     if initialdir:
         panel.setDirectoryURL_(NSURL.fileURLWithPath_(initialdir))
+
+    if filters:
+        types = filter_to_ut_types(filters)
+        panel.setAllowedContentTypes_(types)
 
     if panel.runModal() != 1:
         return None

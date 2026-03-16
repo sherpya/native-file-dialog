@@ -3,10 +3,9 @@ from __future__ import annotations
 import tkinter as tk
 from functools import cache
 from tkinter import filedialog
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
-    from typing import List
     from .. import FilterSpec
 
 
@@ -27,9 +26,10 @@ def open_file(title: str | None = None, initialdir: str | None = None,
     return [path] if path else None
 
 
-def save_file(title: str | None = None, initialdir: str | None = None) -> str | None:
+def save_file(title: str | None = None, initialdir: str | None = None,
+              filters: FilterSpec | None = None) -> str | None:
     get_root()
-    return filedialog.asksaveasfilename(title=title, initialdir=initialdir) or None
+    return filedialog.asksaveasfilename(title=title, initialdir=initialdir, filetypes=filters or []) or None
 
 
 def open_directory(title: str | None = None, initialdir: str | None = None) -> str | None:

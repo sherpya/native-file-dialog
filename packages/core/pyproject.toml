@@ -4,6 +4,7 @@ dynamic = ["version"]
 requires-python = ">=3.11"
 dependencies = [
   "native-file-dialog-gtk; sys_platform == 'linux'",
+  "native-file-dialog-gtk3; sys_platform == 'linux'",
   "native-file-dialog-qt; sys_platform == 'linux'",
 ]
 

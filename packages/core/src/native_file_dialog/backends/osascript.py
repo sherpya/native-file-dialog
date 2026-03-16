@@ -6,10 +6,7 @@ from __future__ import annotations
 
 import subprocess
 from subprocess import SubprocessError
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from typing import List
+from typing import List
 
 
 def run_applescript(script: str) -> str:
@@ -63,7 +60,8 @@ def open_file(title: str | None = None, initialdir: str | None = None,
         return None
 
 
-def save_file(title: str | None = None, initialdir: str | None = None) -> str | None:
+def save_file(title: str | None = None, initialdir: str | None = None,
+              filters=None) -> str | None:
     opts = []
 
     if title:

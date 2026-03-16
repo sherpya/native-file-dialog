@@ -11,16 +11,13 @@ import importlib
 import os
 import sys
 from functools import cache
-from typing import TYPE_CHECKING
+from typing import List, Literal, Tuple, TypeAlias
 
-if TYPE_CHECKING:
-    from typing import TypeAlias, List, Tuple, Literal
+PathLike: TypeAlias = str | os.PathLike[str]
+FilterSpec: TypeAlias = List[Tuple[str, str]]
+Backend: TypeAlias = Literal['tk', 'qt', 'gtk', 'gtk3', 'pyobjc', 'osascript']
 
-    PathLike: TypeAlias = str | os.PathLike
-    FilterSpec: TypeAlias = List[Tuple[str, str]]
-    Backend: TypeAlias = Literal['tk', 'qt', 'gtk', 'pyobjc', 'osascript']
-
-__all__ = ['open_file', 'save_file', 'open_directory']
+__all__ = ['open_file', 'save_file', 'open_directory', 'FilterSpec', 'Backend']
 
 package = 'native_file_dialog.backends'
 
@@ -69,6 +66,8 @@ def resolve_backend(override: Backend | None = None):
     if sys.platform == 'linux':
         if override == 'gtk':
             return importlib.import_module('.gtk', package=package)
+        elif override == 'gtk3':
+            return importlib.import_module('.gtk3', package=package)
         elif override == 'qt':
             return importlib.import_module('.qt', package=package)
 
@@ -99,20 +98,21 @@ def open_file(title: str | None = None, initialdir: PathLike | None = None, filt
     return backend_module.open_file(title=title or '', initialdir=initialdir or '.', filters=filters, multiple=multiple)
 
 
-def save_file(title: str | None = None, initialdir: PathLike | None = None,
+def save_file(title: str | None = None, initialdir: PathLike | None = None, filters: FilterSpec | None = None,
               backend: Backend | None = None) -> str | None:
     """
     Open a save file dialog.
 
     :param title: Dialog title.
     :param initialdir: Initial directory.
+    :param filters: List of (description, pattern) tuples, e.g. [('PDF files', '*.pdf')].
     :param backend: Force backend: 'gtk', 'qt' (Linux), 'pyobjc', 'osascript' (macOS), or 'tk' (any platform).
     :return: Selected path or None if cancelled.
     """
     backend_module = resolve_backend(backend)
     if initialdir is not None:
         initialdir = os.fspath(initialdir)
-    return backend_module.save_file(title=title or '', initialdir=initialdir or '.')
+    return backend_module.save_file(title=title or '', initialdir=initialdir or '.', filters=filters)
 
 
 def open_directory(title: str | None = None, initialdir: PathLike | None = None,

@@ -8,4 +8,4 @@ RUN apt-get update && apt-get install -y \
 RUN python -m pip install --upgrade pip && \
     python -m pip install build scikit-build-core
 
-WORKDIR /project
+WORKDIR /packages/backend-gtk

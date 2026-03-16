@@ -4,6 +4,7 @@ __pycache__/
 # Distribution / build
 build/
 dist/
+/local-pypi
 
 # Virtual environments
 .venv/

@@ -2,11 +2,10 @@ ARG PYTHON_VERSION=3.11
 FROM python:${PYTHON_VERSION}-slim-bookworm
 
 RUN apt-get update && apt-get install -y \
-    python3 python3-dev python3-pip \
-    build-essential cmake \
-    qt6-base-dev
+    build-essential cmake pkg-config \
+    libgtk-3-dev
 
 RUN python -m pip install --upgrade pip && \
-    python -m pip install build scikit-build-core pybind11
+    python -m pip install build scikit-build-core
 
-WORKDIR /project
+WORKDIR /packages/backend-gtk3

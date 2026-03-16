@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
-    from typing import List
     from .. import FilterSpec
 
 from native_file_dialog_qt import (
@@ -27,12 +26,13 @@ def open_file(title: str | None = None, initialdir: str | None = None,
     if multiple:
         result = _open_multiple(title or '', initialdir or '', filter_to_qt_string(filters))
         return result if result else None
-    result = _open_file(title or '', initialdir or '', filter_to_qt_string(filters))
-    return [result] if result is not None else None
+    path = _open_file(title or '', initialdir or '', filter_to_qt_string(filters))
+    return [path] if path is not None else None
 
 
-def save_file(title: str | None = None, initialdir: str | None = None) -> str | None:
-    result = _save_file(title or '', os.fspath(initialdir) if initialdir else '')
+def save_file(title: str | None = None, initialdir: str | None = None,
+              filters: FilterSpec | None = None) -> str | None:
+    result = _save_file(title or '', os.fspath(initialdir) if initialdir else '', filter_to_qt_string(filters))
     return result if result is not None else None
 
 
