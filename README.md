@@ -95,6 +95,20 @@ print(directory)
 paths = nfd.open_file(title="Pick", backend="gtk")
 ```
 
+## macOS PyObjC backend
+
+The `pyobjc` backend uses native Cocoa dialogs (`NSOpenPanel` / `NSSavePanel`).
+Install the required frameworks:
+
+```bash
+pip install pyobjc-framework-Cocoa pyobjc-framework-UniformTypeIdentifiers
+```
+
+- `pyobjc-framework-Cocoa` provides `AppKit` and `Foundation` (open/save/directory dialogs)
+- `pyobjc-framework-UniformTypeIdentifiers` provides `UTType` (filter support in save dialogs)
+
+If neither package is installed, the backend falls back to `osascript` (AppleScript).
+
 ## Local development
 
 When working on the monorepo locally, `uv`’s resolver cannot see the unpublished
