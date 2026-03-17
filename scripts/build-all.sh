@@ -22,27 +22,32 @@ echo "=== Building core ==="
 mkdir -p "$PYPI_DIR/native-file-dialog"
 (cd "$REPO_ROOT/packages/core" && python3 -m build --wheel -o "$PYPI_DIR/native-file-dialog")
 
+if [ "${CORE_ONLY:-}" = "1" ]; then
+    echo "=== Done (core only) ==="
+    exit 0
+fi
+
 # --- Build GTK4 ---
 echo "=== Building GTK4 (Python $PYVER) ==="
 rm -rf "$REPO_ROOT/packages/backend-gtk/dist"
-docker build -f "$REPO_ROOT/docker/gtk.Dockerfile" --build-arg PYTHON_VERSION="$PYVER" -t nfd-gtk "$REPO_ROOT"
-docker run --rm --user "$(id -u):$(id -g)" -v "$REPO_ROOT/packages:/packages" nfd-gtk python3 -m build --wheel
+docker build -f "$REPO_ROOT/docker/gtk.Dockerfile" --build-arg PYTHON_VERSION="$PYVER" -t "nfd-gtk:$PYVER" "$REPO_ROOT"
+docker run --rm --user "$(id -u):$(id -g)" -v "$REPO_ROOT/packages:/packages" "nfd-gtk:$PYVER" python3 -m build --wheel
 mkdir -p "$PYPI_DIR/native-file-dialog-gtk"
 cp "$REPO_ROOT/packages/backend-gtk/dist/"*.whl "$PYPI_DIR/native-file-dialog-gtk/"
 
 # --- Build GTK3 ---
 echo "=== Building GTK3 (Python $PYVER) ==="
 rm -rf "$REPO_ROOT/packages/backend-gtk3/dist"
-docker build -f "$REPO_ROOT/docker/gtk3.Dockerfile" --build-arg PYTHON_VERSION="$PYVER" -t nfd-gtk3 "$REPO_ROOT"
-docker run --rm --user "$(id -u):$(id -g)" -v "$REPO_ROOT/packages:/packages" nfd-gtk3 python3 -m build --wheel
+docker build -f "$REPO_ROOT/docker/gtk3.Dockerfile" --build-arg PYTHON_VERSION="$PYVER" -t "nfd-gtk3:$PYVER" "$REPO_ROOT"
+docker run --rm --user "$(id -u):$(id -g)" -v "$REPO_ROOT/packages:/packages" "nfd-gtk3:$PYVER" python3 -m build --wheel
 mkdir -p "$PYPI_DIR/native-file-dialog-gtk3"
 cp "$REPO_ROOT/packages/backend-gtk3/dist/"*.whl "$PYPI_DIR/native-file-dialog-gtk3/"
 
 # --- Build Qt ---
 echo "=== Building Qt (Python $PYVER) ==="
 rm -rf "$REPO_ROOT/packages/backend-qt/dist"
-docker build -f "$REPO_ROOT/docker/qt.Dockerfile" --build-arg PYTHON_VERSION="$PYVER" -t nfd-qt "$REPO_ROOT"
-docker run --rm --user "$(id -u):$(id -g)" -v "$REPO_ROOT/packages/backend-qt:/project" nfd-qt python3 -m build --wheel
+docker build -f "$REPO_ROOT/docker/qt.Dockerfile" --build-arg PYTHON_VERSION="$PYVER" -t "nfd-qt:$PYVER" "$REPO_ROOT"
+docker run --rm --user "$(id -u):$(id -g)" -v "$REPO_ROOT/packages/backend-qt:/project" "nfd-qt:$PYVER" python3 -m build --wheel
 mkdir -p "$PYPI_DIR/native-file-dialog-qt"
 cp "$REPO_ROOT/packages/backend-qt/dist/"*.whl "$PYPI_DIR/native-file-dialog-qt/"
 
