@@ -2,7 +2,7 @@
 native_file_dialog: native open/save file dialogs (single and multiple selection).
 
 Uses Qt or GTK on Linux (via XDG_CURRENT_DESKTOP), ctypes on Windows,
-osascript or PyObjC on macOS, with tkinter fallback.
+PyObjC on macOS, with tkinter fallback.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from typing import List, Literal, Tuple, TypeAlias
 
 PathLike: TypeAlias = str | os.PathLike[str]
 FilterSpec: TypeAlias = List[Tuple[str, str]]
-Backend: TypeAlias = Literal['tk', 'qt', 'gtk', 'gtk3', 'pyobjc', 'osascript']
+Backend: TypeAlias = Literal['tk', 'qt', 'gtk', 'gtk3', 'pyobjc']
 
 __all__ = ['open_file', 'save_file', 'open_directory', 'FilterSpec', 'Backend']
 
@@ -32,7 +32,7 @@ def get_backend():
         try:
             return importlib.import_module('.pyobjc', package=package)
         except ImportError:
-            return importlib.import_module('.osascript', package=package)
+            return importlib.import_module('.tk', package=package)
 
     # Linux: choose order by XDG_CURRENT_DESKTOP
     xdg = os.environ.get('XDG_CURRENT_DESKTOP', '').upper()
@@ -54,7 +54,7 @@ def get_backend():
 
 def resolve_backend(override: Backend | None = None):
     """
-    Resolve backend: if override is 'gtk', 'qt', 'pyobjc', 'osascript', 'tk',
+    Resolve backend: if override is 'gtk', 'gtk3', 'qt', 'pyobjc', 'tk',
     use that backend. Otherwise, autodetect.
     """
     if not override:
@@ -74,8 +74,6 @@ def resolve_backend(override: Backend | None = None):
     if sys.platform == 'darwin':
         if override == 'pyobjc':
             return importlib.import_module('.pyobjc', package=package)
-        elif override == 'osascript':
-            return importlib.import_module('.osascript', package=package)
 
     raise Exception(f'Invalid Backend {override} for platform {sys.platform}')
 
@@ -89,7 +87,7 @@ def open_file(title: str | None = None, initialdir: PathLike | None = None, filt
     :param initialdir: Initial directory.
     :param filters: List of (description, pattern) tuples, e.g. [('Python', '*.py')].
     :param multiple: If True, allow selecting multiple files.
-    :param backend: Force backend: 'gtk', 'qt' (Linux), 'pyobjc', 'osascript' (macOS), or 'tk' (any platform).
+    :param backend: Force backend: 'gtk', 'gtk3', 'qt' (Linux), 'pyobjc' (macOS), or 'tk' (any platform).
     :return: List of selected paths, or None if cancelled. Single selection returns [path].
     """
     backend_module = resolve_backend(backend)
@@ -106,7 +104,7 @@ def save_file(title: str | None = None, initialdir: PathLike | None = None, filt
     :param title: Dialog title.
     :param initialdir: Initial directory.
     :param filters: List of (description, pattern) tuples, e.g. [('PDF files', '*.pdf')].
-    :param backend: Force backend: 'gtk', 'qt' (Linux), 'pyobjc', 'osascript' (macOS), or 'tk' (any platform).
+    :param backend: Force backend: 'gtk', 'gtk3', 'qt' (Linux), 'pyobjc' (macOS), or 'tk' (any platform).
     :return: Selected path or None if cancelled.
     """
     backend_module = resolve_backend(backend)
@@ -122,7 +120,7 @@ def open_directory(title: str | None = None, initialdir: PathLike | None = None,
 
     :param title: Dialog title.
     :param initialdir: Initial directory.
-    :param backend: Force backend: 'gtk', 'qt' (Linux), 'pyobjc', 'osascript' (macOS), or 'tk' (any platform).
+    :param backend: Force backend: 'gtk', 'gtk3', 'qt' (Linux), 'pyobjc' (macOS), or 'tk' (any platform).
     :return: Selected directory path or None if cancelled.
     """
     backend_module = resolve_backend(backend)

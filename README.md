@@ -19,7 +19,7 @@ platform markers. On macOS and Windows, only core dependencies are installed.
 `native_file_dialog` keeps the same backend resolution behavior:
 
 - Linux: try Qt/GTK by desktop preference and fall back to tkinter
-- macOS: PyObjC then osascript fallback
+- macOS: PyObjC with tkinter fallback
 - Windows: win32 backend
 
 If a Linux native backend is not installed or fails to import, fallback selection
@@ -91,7 +91,7 @@ print(path)
 directory = nfd.open_directory(title="Select a folder")
 print(directory)
 
-# Force a specific backend ('gtk', 'gtk3', 'qt', 'tk', 'pyobjc', 'osascript')
+# Force a specific backend ('gtk', 'gtk3', 'qt', 'tk', 'pyobjc')
 paths = nfd.open_file(title="Pick", backend="gtk")
 ```
 
@@ -107,7 +107,7 @@ pip install pyobjc-framework-Cocoa pyobjc-framework-UniformTypeIdentifiers
 - `pyobjc-framework-Cocoa` provides `AppKit` and `Foundation` (open/save/directory dialogs)
 - `pyobjc-framework-UniformTypeIdentifiers` provides `UTType` (filter support in save dialogs)
 
-If neither package is installed, the backend falls back to `osascript` (AppleScript).
+If neither package is installed, the backend falls back to tkinter.
 
 ## Local development
 
