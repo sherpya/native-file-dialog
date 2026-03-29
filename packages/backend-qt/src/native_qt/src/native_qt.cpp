@@ -71,7 +71,9 @@ py::object open_file(const std::string &title, const std::string &initialdir, co
   dlg.selectFile(start.preselectedFile);
   applyFilter(dlg, QString::fromStdString(filter));
 
-  if (!dlg.exec()) return py::none();
+  int accepted;
+  { py::gil_scoped_release release; accepted = dlg.exec(); }
+  if (!accepted) return py::none();
   const QStringList result = dlg.selectedFiles();
   if (result.isEmpty()) return py::none();
   return py::cast(result.at(0).toStdString());
@@ -92,7 +94,9 @@ std::vector<std::string> open_multiple(const std::string &title, const std::stri
   dlg.selectFile(start.preselectedFile);
   applyFilter(dlg, QString::fromStdString(filter));
 
-  if (!dlg.exec()) return {};
+  int accepted;
+  { py::gil_scoped_release release; accepted = dlg.exec(); }
+  if (!accepted) return {};
   const QStringList result = dlg.selectedFiles();
   std::vector<std::string> out;
   out.reserve(result.size());
@@ -115,7 +119,9 @@ py::object save_file(const std::string &title, const std::string &initialdir, co
   dlg.selectFile(start.preselectedFile);
   applyFilter(dlg, QString::fromStdString(filter));
 
-  if (!dlg.exec()) return py::none();
+  int accepted;
+  { py::gil_scoped_release release; accepted = dlg.exec(); }
+  if (!accepted) return py::none();
   const QStringList result = dlg.selectedFiles();
   if (result.isEmpty()) return py::none();
   return py::cast(result.at(0).toStdString());
@@ -135,7 +141,9 @@ py::object open_directory(const std::string &title, const std::string &initialdi
   dlg.setSupportedSchemes({QStringLiteral("file")});
   dlg.setDirectoryUrl(start.directory);
 
-  if (!dlg.exec()) return py::none();
+  int accepted;
+  { py::gil_scoped_release release; accepted = dlg.exec(); }
+  if (!accepted) return py::none();
   const QStringList result = dlg.selectedFiles();
   if (result.isEmpty()) return py::none();
   return py::cast(result.at(0).toStdString());

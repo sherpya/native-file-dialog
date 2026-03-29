@@ -272,7 +272,9 @@ static PyObject *run_dialog(void) {
 #endif
   G_GNUC_END_IGNORE_DEPRECATIONS
   g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL);
+  Py_BEGIN_ALLOW_THREADS
   g_application_run(G_APPLICATION(app), 0, NULL);
+  Py_END_ALLOW_THREADS
 
   if (nfd_canceled || !nfd_result_paths || nfd_result_paths->len == 0) {
     nfd_clear_result();
