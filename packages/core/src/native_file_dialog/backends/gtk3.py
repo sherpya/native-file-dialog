@@ -17,7 +17,8 @@ def filter_to_gtk_string(filters: FilterSpec | None = None) -> List[str]:
     """GTK format: list of 'Description | pattern1 pattern2'."""
     if not filters:
         return []
-    return [f'{desc} | {pattern}' for desc, pattern in filters]
+    # GTK uses spaces to separate multiple patterns; normalize semicolons
+    return [f'{desc} | {pattern.replace(";", " ")}' for desc, pattern in filters]
 
 
 def open_file(title: str | None = None, initialdir: str | None = None,

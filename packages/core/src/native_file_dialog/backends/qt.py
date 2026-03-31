@@ -18,7 +18,8 @@ def filter_to_qt_string(filters: FilterSpec | None = None) -> str:
     """Qt format: 'Description (*.a *.b);;Other (*.c)' (;; between entries, space between patterns)."""
     if not filters:
         return ''
-    return ';;'.join((f'{desc} ({pattern})' for desc, pattern in filters))
+    # Qt uses spaces to separate multiple patterns; normalize semicolons
+    return ';;'.join((f'{desc} ({pattern.replace(";", " ")})' for desc, pattern in filters))
 
 
 def open_file(title: str | None = None, initialdir: str | None = None,

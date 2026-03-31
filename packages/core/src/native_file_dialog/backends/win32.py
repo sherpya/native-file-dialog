@@ -103,7 +103,8 @@ def _filter_string(filters: FilterSpec | None) -> str:
     parts = []
     for desc, pattern in filters:
         parts.append(desc)
-        parts.append(pattern)
+        # Win32 uses ';' to separate multiple patterns; normalize spaces
+        parts.append(';'.join(pattern.replace(';', ' ').split()))
     return '\x00'.join(parts) + '\x00\x00'
 
 

@@ -18,10 +18,12 @@ def filter_to_ut_types(filter_spec: FilterSpec) -> List[UTType]:
     """Extract UTTypes from glob patterns like '*.py', '*.md'"""
     ut_types = []
     for _, pattern in filter_spec:
-        if pattern.startswith('*.'):
-            ext = pattern[2:]
-            if ut_type := UTType.typeWithFilenameExtension_(ext):
-                ut_types.append(ut_type)
+        # Split on spaces and semicolons to handle multiple patterns
+        for single in pattern.replace(';', ' ').split():
+            if single.startswith('*.'):
+                ext = single[2:]
+                if ut_type := UTType.typeWithFilenameExtension_(ext):
+                    ut_types.append(ut_type)
     return ut_types
 
 
