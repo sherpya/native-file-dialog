@@ -31,8 +31,8 @@ def open_file(title: str | None = None, initialdir: str | None = None,
 
 
 def save_file(title: str | None = None, initialdir: str | None = None,
-              filters: FilterSpec | None = None) -> str | None:
-    result = _save_file(title or '', initialdir or '', filter_to_gtk_string(filters))
+              filters: FilterSpec | None = None, default_name: str | None = None) -> str | None:
+    result = _save_file(title or '', initialdir or '', filter_to_gtk_string(filters), default_name or '')
     return result if result is not None else None
 
 

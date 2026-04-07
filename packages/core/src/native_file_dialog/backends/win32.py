@@ -153,8 +153,11 @@ def open_file(title: str | None = None, initialdir: str | None = None,
 
 
 def save_file(title: str | None = None, initialdir: str | None = None,
-              filters: FilterSpec | None = None) -> str | None:
+              filters: FilterSpec | None = None, default_name: str | None = None) -> str | None:
     buf = create_unicode_buffer(MAX_PATH_BUF)
+    if default_name:
+        for i, ch in enumerate(default_name[:MAX_PATH_BUF - 1]):
+            buf[i] = ch
     ofn = _make_ofn(title or 'Save file', initialdir, filters, buf,
                     OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR)
     if not _comdlg32.GetSaveFileNameW(byref(ofn)):

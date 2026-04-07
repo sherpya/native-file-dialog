@@ -97,20 +97,22 @@ def open_file(title: str | None = None, initialdir: PathLike | None = None, filt
 
 
 def save_file(title: str | None = None, initialdir: PathLike | None = None, filters: FilterSpec | None = None,
-              backend: Backend | None = None) -> str | None:
+              default_name: str | None = None, backend: Backend | None = None) -> str | None:
     """
     Open a save file dialog.
 
     :param title: Dialog title.
     :param initialdir: Initial directory.
     :param filters: List of (description, pattern) tuples, e.g. [('PDF files', '*.pdf')].
+    :param default_name: Pre-filled file name suggestion.
     :param backend: Force backend: 'gtk', 'gtk3', 'qt' (Linux), 'pyobjc' (macOS), or 'tk' (any platform).
     :return: Selected path or None if cancelled.
     """
     backend_module = resolve_backend(backend)
     if initialdir is not None:
         initialdir = os.fspath(initialdir)
-    return backend_module.save_file(title=title or '', initialdir=initialdir or '.', filters=filters)
+    return backend_module.save_file(title=title or '', initialdir=initialdir or '.', filters=filters,
+                                    default_name=default_name)
 
 
 def open_directory(title: str | None = None, initialdir: PathLike | None = None,

@@ -57,7 +57,7 @@ def open_file(title: str | None = None, initialdir: str | None = None,
 
 
 def save_file(title: str | None = None, initialdir: str | None = None,
-              filters: FilterSpec | None = None) -> str | None:
+              filters: FilterSpec | None = None, default_name: str | None = None) -> str | None:
     panel = NSSavePanel.savePanel()
 
     if title:
@@ -65,6 +65,9 @@ def save_file(title: str | None = None, initialdir: str | None = None,
 
     if initialdir:
         panel.setDirectoryURL_(NSURL.fileURLWithPath_(initialdir))
+
+    if default_name:
+        panel.setNameFieldStringValue_(default_name)
 
     if filters:
         types = filter_to_ut_types(filters)

@@ -104,7 +104,7 @@ std::vector<std::string> open_multiple(const std::string &title, const std::stri
   return out;
 }
 
-py::object save_file(const std::string &title, const std::string &initialdir, const std::string &filter) {
+py::object save_file(const std::string &title, const std::string &initialdir, const std::string &filter, const std::string &default_name = "") {
   (void)appInstance();
 
   const QUrl startUrl = QUrl::fromUserInput(QString::fromStdString(initialdir));
@@ -116,7 +116,10 @@ py::object save_file(const std::string &title, const std::string &initialdir, co
   dlg.setFileMode(QFileDialog::AnyFile);
   dlg.setSupportedSchemes({QStringLiteral("file")});
   dlg.setDirectoryUrl(start.directory);
-  dlg.selectFile(start.preselectedFile);
+  if (!default_name.empty())
+    dlg.selectFile(QString::fromStdString(default_name));
+  else
+    dlg.selectFile(start.preselectedFile);
   applyFilter(dlg, QString::fromStdString(filter));
 
   int accepted;
@@ -152,7 +155,7 @@ py::object open_directory(const std::string &title, const std::string &initialdi
 PYBIND11_MODULE(_native_qt, m) {
   m.def("open_file", &open_file, py::arg("title"), py::arg("initialdir"), py::arg("filters"));
   m.def("open_multiple", &open_multiple, py::arg("title"), py::arg("initialdir"), py::arg("filters"));
-  m.def("save_file", &save_file, py::arg("title"), py::arg("initialdir"), py::arg("filters"));
+  m.def("save_file", &save_file, py::arg("title"), py::arg("initialdir"), py::arg("filters"), py::arg("default_name") = "");
   m.def("open_directory", &open_directory, py::arg("title"), py::arg("initialdir"));
 
   auto atexit = py::module_::import("atexit");

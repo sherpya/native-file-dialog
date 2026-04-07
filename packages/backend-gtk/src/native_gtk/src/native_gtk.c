@@ -27,6 +27,7 @@ static int nfd_canceled = 1;
 
 static char *nfd_title = NULL;
 static char *nfd_initialdir = NULL;
+static char *nfd_default_name = NULL;
 static char **nfd_filter_list = NULL;
 static int nfd_multi = 0;
 static int nfd_save = 0;
@@ -52,6 +53,8 @@ static void nfd_free_params(void) {
   nfd_title = NULL;
   g_free(nfd_initialdir);
   nfd_initialdir = NULL;
+  g_free(nfd_default_name);
+  nfd_default_name = NULL;
   if (nfd_filter_list) {
     for (char **p = nfd_filter_list; *p; p++) g_free(*p);
     g_free(nfd_filter_list);
@@ -158,6 +161,9 @@ static void on_activate(GApplication *app, gpointer user_data) {
   if (filters_model)
     gtk_file_dialog_set_filters(dialog, filters_model);
 
+  if (nfd_save && nfd_default_name && nfd_default_name[0])
+    gtk_file_dialog_set_initial_name(dialog, nfd_default_name);
+
   g_object_ref(dialog);
   if (nfd_choose_dir)
     gtk_file_dialog_select_folder(dialog, NULL, NULL, dialog_ready_cb, app);
@@ -250,6 +256,9 @@ static void on_activate(GApplication *app, gpointer user_data) {
 
   if (nfd_multi)
     gtk_file_chooser_set_select_multiple(GTK_FILE_CHOOSER(dialog), TRUE);
+
+  if (nfd_save && nfd_default_name && nfd_default_name[0])
+    gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(dialog), nfd_default_name);
 
   nfd_add_filters(GTK_FILE_CHOOSER(dialog), nfd_filter_list);
   gtk_native_dialog_show(GTK_NATIVE_DIALOG(dialog));
@@ -359,15 +368,16 @@ static PyObject *py_open_multiple(PyObject *self, PyObject *args) {
 }
 
 static PyObject *py_save_file(PyObject *self, PyObject *args) {
-  const char *title = NULL, *initialdir = NULL;
+  const char *title = NULL, *initialdir = NULL, *default_name = NULL;
   PyObject *filter_list_obj = NULL;
   (void)self;
-  if (!PyArg_ParseTuple(args, "ss|O", &title, &initialdir, &filter_list_obj))
+  if (!PyArg_ParseTuple(args, "ss|Os", &title, &initialdir, &filter_list_obj, &default_name))
     return NULL;
 
   nfd_free_params();
   nfd_title = g_strdup(title);
   nfd_initialdir = g_strdup(initialdir);
+  nfd_default_name = default_name ? g_strdup(default_name) : NULL;
   nfd_parse_filter_arg(filter_list_obj);
   nfd_multi = 0;
   nfd_save = 1;

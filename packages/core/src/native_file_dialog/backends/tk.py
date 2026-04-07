@@ -35,9 +35,10 @@ def open_file(title: str | None = None, initialdir: str | None = None,
 
 
 def save_file(title: str | None = None, initialdir: str | None = None,
-              filters: FilterSpec | None = None) -> str | None:
+              filters: FilterSpec | None = None, default_name: str | None = None) -> str | None:
     get_root()
-    return filedialog.asksaveasfilename(title=title, initialdir=initialdir, filetypes=_normalize_filters(filters)) or None
+    return filedialog.asksaveasfilename(title=title, initialdir=initialdir, filetypes=_normalize_filters(filters),
+                                        initialfile=default_name or '') or None
 
 
 def open_directory(title: str | None = None, initialdir: str | None = None) -> str | None:
