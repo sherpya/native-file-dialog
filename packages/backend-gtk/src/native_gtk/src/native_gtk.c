@@ -208,6 +208,21 @@ static void nfd_add_filters(GtkFileChooser *chooser, char **filter_list) {
   }
 }
 
+typedef struct {
+  GApplication *app;
+  GtkNativeDialog *native;
+} NfdGtk3CloseData;
+
+static gboolean nfd_finish_close_cb(gpointer user_data) {
+  NfdGtk3CloseData *data = user_data;
+  g_object_unref(data->native);
+  g_application_release(data->app);
+  g_application_quit(data->app);
+  g_object_unref(data->app);
+  g_free(data);
+  return G_SOURCE_REMOVE;
+}
+
 static void dialog_response_cb(GtkNativeDialog *native, int response, gpointer user_data) {
   GtkFileChooser *chooser = GTK_FILE_CHOOSER(native);
   GApplication *app = G_APPLICATION(user_data);
@@ -228,8 +243,13 @@ static void dialog_response_cb(GtkNativeDialog *native, int response, gpointer u
       }
     }
   }
-  g_object_unref(native);
-  g_application_quit(app);
+  gtk_native_dialog_hide(native);
+  gtk_native_dialog_destroy(native);
+
+  NfdGtk3CloseData *close_data = g_new0(NfdGtk3CloseData, 1);
+  close_data->app = g_object_ref(app);
+  close_data->native = native;
+  g_timeout_add(100, nfd_finish_close_cb, close_data);
 }
 
 static void on_activate(GApplication *app, gpointer user_data) {
