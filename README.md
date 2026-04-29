@@ -25,6 +25,11 @@ platform markers. On macOS and Windows, only core dependencies are installed.
 If a Linux native backend is not installed or fails to import, fallback selection
 continues and tkinter remains the final fallback.
 
+GTK3 and GTK4 cannot be mixed in the same Python process. Once one GTK backend
+has been imported, later attempts to use the other GTK major version fail with a
+clear `RuntimeError`; use one GTK backend consistently or run the other in a
+subprocess.
+
 ## Repository layout
 
 - `packages/core`

@@ -432,9 +432,44 @@ static PyMethodDef nfd_methods[] = {
 
 #ifdef NFD_USE_GTK4
 #define NFD_MODULE_NAME "_native_gtk"
+#define NFD_GTK_MAJOR 4
 #else
 #define NFD_MODULE_NAME "_native_gtk3"
+#define NFD_GTK_MAJOR 3
 #endif
+
+static int nfd_guard_gtk_major(void) {
+  PyObject *builtins = PyImport_ImportModule("builtins");
+  if (!builtins) return -1;
+
+  PyObject *active = PyObject_GetAttrString(builtins, "_native_file_dialog_gtk_major");
+  if (active) {
+    long active_major = PyLong_AsLong(active);
+    if (!PyErr_Occurred() && (active_major == 3 || active_major == 4) && active_major != NFD_GTK_MAJOR) {
+      PyErr_Format(PyExc_RuntimeError,
+                   "Cannot use GTK%d after GTK%ld in the same Python process; "
+                   "choose one GTK backend per process or run the other backend in a subprocess.",
+                   NFD_GTK_MAJOR, active_major);
+      Py_DECREF(active);
+      Py_DECREF(builtins);
+      return -1;
+    }
+    PyErr_Clear();
+    Py_DECREF(active);
+  } else {
+    PyErr_Clear();
+  }
+
+  PyObject *major = PyLong_FromLong(NFD_GTK_MAJOR);
+  if (!major) {
+    Py_DECREF(builtins);
+    return -1;
+  }
+  int result = PyObject_SetAttrString(builtins, "_native_file_dialog_gtk_major", major);
+  Py_DECREF(major);
+  Py_DECREF(builtins);
+  return result;
+}
 
 static struct PyModuleDef nfd_module = {
   PyModuleDef_HEAD_INIT,
@@ -446,10 +481,12 @@ static struct PyModuleDef nfd_module = {
 
 #ifdef NFD_USE_GTK4
 PyMODINIT_FUNC PyInit__native_gtk(void) {
+  if (nfd_guard_gtk_major() < 0) return NULL;
   return PyModule_Create(&nfd_module);
 }
 #else
 PyMODINIT_FUNC PyInit__native_gtk3(void) {
+  if (nfd_guard_gtk_major() < 0) return NULL;
   return PyModule_Create(&nfd_module);
 }
 #endif

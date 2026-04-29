@@ -1,9 +1,26 @@
 from __future__ import annotations
 
+import builtins
 from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from .. import FilterSpec
+
+_GTK_MARKER = '_native_file_dialog_gtk_major'
+_GTK_MIX_ERROR = (
+    'Cannot use GTK{requested} after GTK{active} in the same Python process; '
+    'choose one GTK backend per process or run the other backend in a subprocess.'
+)
+
+
+def _ensure_gtk_major(requested: int) -> None:
+    active = getattr(builtins, _GTK_MARKER, None)
+    if active in (3, 4) and active != requested:
+        raise RuntimeError(_GTK_MIX_ERROR.format(requested=requested, active=active))
+    setattr(builtins, _GTK_MARKER, requested)
+
+
+_ensure_gtk_major(3)
 
 from native_file_dialog_gtk3 import (
     open_file as _open_file,
