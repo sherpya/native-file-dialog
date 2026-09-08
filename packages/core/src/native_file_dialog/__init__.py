@@ -11,16 +11,40 @@ import importlib
 import os
 import sys
 import builtins
+import threading
+from collections.abc import Callable
 from functools import cache
 from typing import List, Literal, Tuple, TypeAlias
 
 PathLike: TypeAlias = str | os.PathLike[str]
 FilterSpec: TypeAlias = List[Tuple[str, str]]
 Backend: TypeAlias = Literal['tk', 'qt', 'gtk', 'gtk3', 'pyobjc']
+EventPump: TypeAlias = Callable[[], bool | None]
 
-__all__ = ['open_file', 'save_file', 'open_directory', 'FilterSpec', 'Backend']
+__all__ = ['open_file', 'save_file', 'open_directory', 'FilterSpec', 'Backend', 'EventPump']
 
 package = 'native_file_dialog.backends'
+_dialog_active = False
+
+
+def _call_backend(backend_module, operation: str, *, event_pump: EventPump | None = None, **kwargs):
+    """Keep native toolkit calls on the GUI thread and reject nested dialogs."""
+    global _dialog_active
+    if event_pump is not None and not callable(event_pump):
+        raise TypeError('event_pump must be callable or None')
+    if sys.platform != 'linux':
+        return getattr(backend_module, operation)(**kwargs)
+    if threading.current_thread() is not threading.main_thread():
+        raise RuntimeError('Linux file dialogs must run on the main thread')
+    if _dialog_active:
+        raise RuntimeError('A native file dialog is already active')
+    _dialog_active = True
+    try:
+        if event_pump is not None and backend_module.__name__.rsplit('.', 1)[-1] != 'tk':
+            kwargs['event_pump'] = event_pump
+        return getattr(backend_module, operation)(**kwargs)
+    finally:
+        _dialog_active = False
 
 _GTK_MARKER = '_native_file_dialog_gtk_major'
 _GTK_MIX_ERROR = (
@@ -107,7 +131,8 @@ def resolve_backend(override: Backend | None = None):
 
 
 def open_file(title: str | None = None, initialdir: PathLike | None = None, filters: FilterSpec | None = None,
-              multiple: bool = False, backend: Backend | None = None) -> List[str] | None:
+              multiple: bool = False, backend: Backend | None = None, *,
+              event_pump: EventPump | None = None) -> List[str] | None:
     """
     Open a file selection dialog.
 
@@ -116,16 +141,19 @@ def open_file(title: str | None = None, initialdir: PathLike | None = None, filt
     :param filters: List of (description, pattern) tuples, e.g. [('Python', '*.py')].
     :param multiple: If True, allow selecting multiple files.
     :param backend: Force backend: 'gtk', 'gtk3', 'qt' (Linux), 'pyobjc' (macOS), or 'tk' (any platform).
+    :param event_pump: Linux GTK/Qt: nonblocking callback every 20 ms; False cancels.
     :return: List of selected paths, or None if cancelled. Single selection returns [path].
     """
     backend_module = resolve_backend(backend)
     if initialdir is not None:
         initialdir = os.fspath(initialdir)
-    return backend_module.open_file(title=title or '', initialdir=initialdir or '.', filters=filters, multiple=multiple)
+    return _call_backend(backend_module, 'open_file', event_pump=event_pump,
+                         title=title or '', initialdir=initialdir or '.', filters=filters, multiple=multiple)
 
 
 def save_file(title: str | None = None, initialdir: PathLike | None = None, filters: FilterSpec | None = None,
-              default_name: str | None = None, backend: Backend | None = None) -> str | None:
+              default_name: str | None = None, backend: Backend | None = None, *,
+              event_pump: EventPump | None = None) -> str | None:
     """
     Open a save file dialog.
 
@@ -134,26 +162,29 @@ def save_file(title: str | None = None, initialdir: PathLike | None = None, filt
     :param filters: List of (description, pattern) tuples, e.g. [('PDF files', '*.pdf')].
     :param default_name: Pre-filled file name suggestion.
     :param backend: Force backend: 'gtk', 'gtk3', 'qt' (Linux), 'pyobjc' (macOS), or 'tk' (any platform).
+    :param event_pump: Linux GTK/Qt: nonblocking callback every 20 ms; False cancels.
     :return: Selected path or None if cancelled.
     """
     backend_module = resolve_backend(backend)
     if initialdir is not None:
         initialdir = os.fspath(initialdir)
-    return backend_module.save_file(title=title or '', initialdir=initialdir or '.', filters=filters,
-                                    default_name=default_name)
+    return _call_backend(backend_module, 'save_file', event_pump=event_pump,
+                         title=title or '', initialdir=initialdir or '.', filters=filters, default_name=default_name)
 
 
 def open_directory(title: str | None = None, initialdir: PathLike | None = None,
-                   backend: Backend | None = None) -> str | None:
+                   backend: Backend | None = None, *, event_pump: EventPump | None = None) -> str | None:
     """
     Open a directory selection dialog.
 
     :param title: Dialog title.
     :param initialdir: Initial directory.
     :param backend: Force backend: 'gtk', 'gtk3', 'qt' (Linux), 'pyobjc' (macOS), or 'tk' (any platform).
+    :param event_pump: Linux GTK/Qt: nonblocking callback every 20 ms; False cancels.
     :return: Selected directory path or None if cancelled.
     """
     backend_module = resolve_backend(backend)
     if initialdir is not None:
         initialdir = os.fspath(initialdir)
-    return backend_module.open_directory(title=title or '', initialdir=initialdir or '.')
+    return _call_backend(backend_module, 'open_directory', event_pump=event_pump,
+                         title=title or '', initialdir=initialdir or '.')

@@ -32,6 +32,74 @@ static char **nfd_filter_list = NULL;
 static int nfd_multi = 0;
 static int nfd_save = 0;
 static int nfd_choose_dir = 0;
+static int nfd_busy = 0;
+static int nfd_stop_requested = 0;
+static PyObject *nfd_event_pump = NULL;
+static PyObject *nfd_error_type = NULL, *nfd_error_value = NULL, *nfd_error_tb = NULL;
+static guint nfd_pump_source = 0;
+#ifdef NFD_USE_GTK4
+static GCancellable *nfd_cancellable = NULL;
+#else
+static GtkNativeDialog *nfd_native = NULL;
+static void dialog_response_cb(GtkNativeDialog *, int, gpointer);
+#endif
+
+/* Called with the GIL, before touching any parameters or toolkit state. */
+static int nfd_begin(PyObject *pump) {
+  if (nfd_busy) {
+    PyErr_SetString(PyExc_RuntimeError, "A native file dialog is already active");
+    return -1;
+  }
+  if (pump != Py_None && !PyCallable_Check(pump)) {
+    PyErr_SetString(PyExc_TypeError, "event_pump must be callable or None");
+    return -1;
+  }
+  PyObject *threading = PyImport_ImportModule("threading");
+  if (!threading) return -1;
+  PyObject *current = PyObject_CallMethod(threading, "current_thread", NULL);
+  PyObject *main_thread = PyObject_CallMethod(threading, "main_thread", NULL);
+  Py_DECREF(threading);
+  int is_main = current && main_thread && current == main_thread;
+  Py_XDECREF(current);
+  Py_XDECREF(main_thread);
+  if (PyErr_Occurred()) return -1;
+  if (!is_main) {
+    PyErr_SetString(PyExc_RuntimeError, "Linux file dialogs must run on the main thread");
+    return -1;
+  }
+  nfd_busy = 1;
+  nfd_stop_requested = 0;
+  nfd_event_pump = pump == Py_None ? NULL : Py_NewRef(pump);
+  return 0;
+}
+
+/* Keep exceptions out of GLib callbacks; restore them after native cleanup. */
+static void nfd_pump(void) {
+  if (!nfd_event_pump || nfd_stop_requested) return;
+  PyObject *result = PyObject_CallNoArgs(nfd_event_pump);
+  if (!result) {
+    PyErr_Fetch(&nfd_error_type, &nfd_error_value, &nfd_error_tb);
+    nfd_stop_requested = 1;
+  } else {
+    nfd_stop_requested = result == Py_False;
+    Py_DECREF(result);
+  }
+}
+
+static gboolean nfd_pump_cb(gpointer user_data) {
+  PyGILState_STATE gil = PyGILState_Ensure();
+  nfd_pump();
+  PyGILState_Release(gil);
+  if (!nfd_stop_requested) return G_SOURCE_CONTINUE;
+  nfd_pump_source = 0;
+#ifdef NFD_USE_GTK4
+  g_cancellable_cancel(nfd_cancellable);
+#else
+  if (nfd_native)
+    dialog_response_cb(nfd_native, GTK_RESPONSE_CANCEL, user_data);
+#endif
+  return G_SOURCE_REMOVE;
+}
 
 static void nfd_clear_result(void) {
   if (nfd_result_paths) {
@@ -140,6 +208,7 @@ static void dialog_ready_cb(GObject *source_object, GAsyncResult *result, gpoint
     }
   }
   g_object_unref(source_object);
+  g_application_release(app);
   g_application_quit(app);
 }
 
@@ -164,15 +233,14 @@ static void on_activate(GApplication *app, gpointer user_data) {
   if (nfd_save && nfd_default_name && nfd_default_name[0])
     gtk_file_dialog_set_initial_name(dialog, nfd_default_name);
 
-  g_object_ref(dialog);
   if (nfd_choose_dir)
-    gtk_file_dialog_select_folder(dialog, NULL, NULL, dialog_ready_cb, app);
+    gtk_file_dialog_select_folder(dialog, NULL, nfd_cancellable, dialog_ready_cb, app);
   else if (nfd_save)
-    gtk_file_dialog_save(dialog, NULL, NULL, dialog_ready_cb, app);
+    gtk_file_dialog_save(dialog, NULL, nfd_cancellable, dialog_ready_cb, app);
   else if (nfd_multi)
-    gtk_file_dialog_open_multiple(dialog, NULL, NULL, dialog_ready_cb, app);
+    gtk_file_dialog_open_multiple(dialog, NULL, nfd_cancellable, dialog_ready_cb, app);
   else
-    gtk_file_dialog_open(dialog, NULL, NULL, dialog_ready_cb, app);
+    gtk_file_dialog_open(dialog, NULL, nfd_cancellable, dialog_ready_cb, app);
 }
 
 #else /* GTK3 */
@@ -224,6 +292,8 @@ static gboolean nfd_finish_close_cb(gpointer user_data) {
 }
 
 static void dialog_response_cb(GtkNativeDialog *native, int response, gpointer user_data) {
+  if (native != nfd_native) return;
+  nfd_native = NULL;
   GtkFileChooser *chooser = GTK_FILE_CHOOSER(native);
   GApplication *app = G_APPLICATION(user_data);
 
@@ -268,6 +338,7 @@ static void on_activate(GApplication *app, gpointer user_data) {
   GtkFileChooserNative *dialog = gtk_file_chooser_native_new(
       nfd_title ? nfd_title : default_title,
       NULL, action, "_OK", "_Cancel");
+  nfd_native = GTK_NATIVE_DIALOG(dialog);
 
   g_signal_connect(dialog, "response", G_CALLBACK(dialog_response_cb), app);
 
@@ -282,13 +353,15 @@ static void on_activate(GApplication *app, gpointer user_data) {
 
   nfd_add_filters(GTK_FILE_CHOOSER(dialog), nfd_filter_list);
   gtk_native_dialog_show(GTK_NATIVE_DIALOG(dialog));
+  if (nfd_stop_requested)
+    dialog_response_cb(nfd_native, GTK_RESPONSE_CANCEL, app);
 }
 
 #endif /* NFD_USE_GTK4 */
 
 /* ---- Shared: run dialog and convert result to Python ---- */
 
-static PyObject *run_dialog(void) {
+static PyObject *run_dialog_impl(void) {
   nfd_clear_result();
 
   /* Suppress deprecation warning for G_APPLICATION_DEFAULT_FLAGS on glib 2.74
@@ -296,14 +369,22 @@ static PyObject *run_dialog(void) {
   G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 #ifdef NFD_USE_GTK4
   g_autoptr(AdwApplication) app = adw_application_new("org.nativefiledialog.gtk", G_APPLICATION_DEFAULT_FLAGS);
+  nfd_cancellable = g_cancellable_new();
 #else
   g_autoptr(GtkApplication) app = gtk_application_new("org.nativefiledialog.gtk", G_APPLICATION_DEFAULT_FLAGS);
 #endif
   G_GNUC_END_IGNORE_DEPRECATIONS
   g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL);
+  if (nfd_event_pump)
+    nfd_pump_source = g_timeout_add(20, nfd_pump_cb, app);
   Py_BEGIN_ALLOW_THREADS
   g_application_run(G_APPLICATION(app), 0, NULL);
   Py_END_ALLOW_THREADS
+
+  if (nfd_stop_requested) {
+    nfd_clear_result();
+    Py_RETURN_NONE;
+  }
 
   if (nfd_canceled || !nfd_result_paths || nfd_result_paths->len == 0) {
     nfd_clear_result();
@@ -329,6 +410,33 @@ static PyObject *run_dialog(void) {
   }
 }
 
+static PyObject *nfd_end(PyObject *result) {
+  if (nfd_pump_source) {
+    g_source_remove(nfd_pump_source);
+    nfd_pump_source = 0;
+  }
+#ifdef NFD_USE_GTK4
+  g_clear_object(&nfd_cancellable);
+#endif
+  nfd_clear_result();
+  nfd_free_params();
+  Py_CLEAR(nfd_event_pump);
+  nfd_busy = 0;
+  if (nfd_error_type) {
+    Py_XDECREF(result);
+    PyErr_Restore(nfd_error_type, nfd_error_value, nfd_error_tb);
+    nfd_error_type = nfd_error_value = nfd_error_tb = NULL;
+    return NULL;
+  }
+  return result;
+}
+
+static PyObject *run_dialog(void) {
+  /* Flush host events before native initialization as well as during its loop. */
+  nfd_pump();
+  return nfd_end(nfd_stop_requested ? Py_NewRef(Py_None) : run_dialog_impl());
+}
+
 /* ---- Shared Python API ---- */
 
 static int nfd_parse_filter_arg(PyObject *filter_list_obj) {
@@ -340,7 +448,8 @@ static int nfd_parse_filter_arg(PyObject *filter_list_obj) {
       if (PyUnicode_Check(item)) {
         Py_ssize_t size;
         const char *s = PyUnicode_AsUTF8AndSize(item, &size);
-        if (s) nfd_filter_list[i] = g_strndup(s, (size_t)size);
+        if (!s) return -1;
+        nfd_filter_list[i] = g_strndup(s, (size_t)size);
       }
     }
   }
@@ -350,14 +459,16 @@ static int nfd_parse_filter_arg(PyObject *filter_list_obj) {
 static PyObject *py_open_file(PyObject *self, PyObject *args) {
   const char *title = NULL, *initialdir = NULL;
   PyObject *filter_list_obj = NULL;
+  PyObject *pump = Py_None;
   (void)self;
-  if (!PyArg_ParseTuple(args, "ss|O", &title, &initialdir, &filter_list_obj))
+  if (!PyArg_ParseTuple(args, "ss|OO", &title, &initialdir, &filter_list_obj, &pump))
     return NULL;
+  if (nfd_begin(pump) < 0) return NULL;
 
   nfd_free_params();
   nfd_title = g_strdup(title);
   nfd_initialdir = g_strdup(initialdir);
-  nfd_parse_filter_arg(filter_list_obj);
+  if (nfd_parse_filter_arg(filter_list_obj) < 0) return nfd_end(NULL);
   nfd_multi = 0;
   nfd_save = 0;
   nfd_choose_dir = 0;
@@ -367,14 +478,16 @@ static PyObject *py_open_file(PyObject *self, PyObject *args) {
 static PyObject *py_open_multiple(PyObject *self, PyObject *args) {
   const char *title = NULL, *initialdir = NULL;
   PyObject *filter_list_obj = NULL;
+  PyObject *pump = Py_None;
   (void)self;
-  if (!PyArg_ParseTuple(args, "ss|O", &title, &initialdir, &filter_list_obj))
+  if (!PyArg_ParseTuple(args, "ss|OO", &title, &initialdir, &filter_list_obj, &pump))
     return NULL;
+  if (nfd_begin(pump) < 0) return NULL;
 
   nfd_free_params();
   nfd_title = g_strdup(title);
   nfd_initialdir = g_strdup(initialdir);
-  nfd_parse_filter_arg(filter_list_obj);
+  if (nfd_parse_filter_arg(filter_list_obj) < 0) return nfd_end(NULL);
   nfd_multi = 1;
   nfd_save = 0;
   nfd_choose_dir = 0;
@@ -390,15 +503,17 @@ static PyObject *py_open_multiple(PyObject *self, PyObject *args) {
 static PyObject *py_save_file(PyObject *self, PyObject *args) {
   const char *title = NULL, *initialdir = NULL, *default_name = NULL;
   PyObject *filter_list_obj = NULL;
+  PyObject *pump = Py_None;
   (void)self;
-  if (!PyArg_ParseTuple(args, "ss|Os", &title, &initialdir, &filter_list_obj, &default_name))
+  if (!PyArg_ParseTuple(args, "ss|OsO", &title, &initialdir, &filter_list_obj, &default_name, &pump))
     return NULL;
+  if (nfd_begin(pump) < 0) return NULL;
 
   nfd_free_params();
   nfd_title = g_strdup(title);
   nfd_initialdir = g_strdup(initialdir);
   nfd_default_name = default_name ? g_strdup(default_name) : NULL;
-  nfd_parse_filter_arg(filter_list_obj);
+  if (nfd_parse_filter_arg(filter_list_obj) < 0) return nfd_end(NULL);
   nfd_multi = 0;
   nfd_save = 1;
   nfd_choose_dir = 0;
@@ -407,9 +522,11 @@ static PyObject *py_save_file(PyObject *self, PyObject *args) {
 
 static PyObject *py_open_directory(PyObject *self, PyObject *args) {
   const char *title = NULL, *initialdir = NULL;
+  PyObject *pump = Py_None;
   (void)self;
-  if (!PyArg_ParseTuple(args, "ss", &title, &initialdir))
+  if (!PyArg_ParseTuple(args, "ss|O", &title, &initialdir, &pump))
     return NULL;
+  if (nfd_begin(pump) < 0) return NULL;
 
   nfd_free_params();
   nfd_title = g_strdup(title);

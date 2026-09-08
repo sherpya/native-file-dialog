@@ -24,23 +24,23 @@ def _normalize_filters(filters: FilterSpec | None) -> list:
 
 
 def open_file(title: str | None = None, initialdir: str | None = None,
-              filters: FilterSpec | None = None, multiple: bool = False) -> List[str] | None:
-    get_root()
+              filters: FilterSpec | None = None, multiple: bool = False, *, parent: tk.Misc | None = None) -> List[str] | None:
+    parent = parent if parent is not None else get_root()
     ft = _normalize_filters(filters)
     if multiple:
-        paths = filedialog.askopenfilenames(title=title, initialdir=initialdir, filetypes=ft)
+        paths = filedialog.askopenfilenames(parent=parent, title=title, initialdir=initialdir, filetypes=ft)
         return list(paths) if paths else None
-    path = filedialog.askopenfilename(title=title, initialdir=initialdir, filetypes=ft)
+    path = filedialog.askopenfilename(parent=parent, title=title, initialdir=initialdir, filetypes=ft)
     return [path] if path else None
 
 
 def save_file(title: str | None = None, initialdir: str | None = None,
-              filters: FilterSpec | None = None, default_name: str | None = None) -> str | None:
-    get_root()
-    return filedialog.asksaveasfilename(title=title, initialdir=initialdir, filetypes=_normalize_filters(filters),
+              filters: FilterSpec | None = None, default_name: str | None = None, *, parent: tk.Misc | None = None) -> str | None:
+    parent = parent if parent is not None else get_root()
+    return filedialog.asksaveasfilename(parent=parent, title=title, initialdir=initialdir, filetypes=_normalize_filters(filters),
                                         initialfile=default_name or '') or None
 
 
-def open_directory(title: str | None = None, initialdir: str | None = None) -> str | None:
-    get_root()
-    return filedialog.askdirectory(title=title, initialdir=initialdir) or None
+def open_directory(title: str | None = None, initialdir: str | None = None, *, parent: tk.Misc | None = None) -> str | None:
+    parent = parent if parent is not None else get_root()
+    return filedialog.askdirectory(parent=parent, title=title, initialdir=initialdir) or None

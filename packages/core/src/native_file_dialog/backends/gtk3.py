@@ -4,7 +4,7 @@ import builtins
 from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
-    from .. import FilterSpec
+    from .. import EventPump, FilterSpec
 
 _GTK_MARKER = '_native_file_dialog_gtk_major'
 _GTK_MIX_ERROR = (
@@ -39,20 +39,21 @@ def filter_to_gtk_string(filters: FilterSpec | None = None) -> List[str]:
 
 
 def open_file(title: str | None = None, initialdir: str | None = None,
-              filters: FilterSpec | None = None, multiple: bool = False) -> List[str] | None:
+              filters: FilterSpec | None = None, multiple: bool = False, *, event_pump: EventPump | None = None) -> List[str] | None:
     if multiple:
-        result = _open_multiple(title or '', initialdir or '', filter_to_gtk_string(filters))
+        result = _open_multiple(title or '', initialdir or '', filter_to_gtk_string(filters), *(() if event_pump is None else (event_pump,)))
         return result if result else None
-    path = _open_file(title or '', initialdir or '', filter_to_gtk_string(filters))
+    path = _open_file(title or '', initialdir or '', filter_to_gtk_string(filters), *(() if event_pump is None else (event_pump,)))
     return [path] if path is not None else None
 
 
 def save_file(title: str | None = None, initialdir: str | None = None,
-              filters: FilterSpec | None = None, default_name: str | None = None) -> str | None:
-    result = _save_file(title or '', initialdir or '', filter_to_gtk_string(filters), default_name or '')
+              filters: FilterSpec | None = None, default_name: str | None = None, *, event_pump: EventPump | None = None) -> str | None:
+    result = _save_file(title or '', initialdir or '', filter_to_gtk_string(filters), default_name or '', *(() if event_pump is None else (event_pump,)))
     return result if result is not None else None
 
 
-def open_directory(title: str | None = None, initialdir: str | None = None) -> str | None:
-    result = _open_directory(title or '', initialdir or '')
+def open_directory(title: str | None = None, initialdir: str | None = None, *,
+                   event_pump: EventPump | None = None) -> str | None:
+    result = _open_directory(title or '', initialdir or '', *(() if event_pump is None else (event_pump,)))
     return result if result is not None else None
