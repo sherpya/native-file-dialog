@@ -1,7 +1,7 @@
 # native-file-dialog
 
 [![PyPI](https://img.shields.io/pypi/v/native-file-dialog)](https://pypi.org/project/native-file-dialog/)
-[![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https://raw.githubusercontent.com/sherpya/native-file-dialog/master/packages/core/pyproject.toml)](https://pypi.org/project/native-file-dialog/)
+[![Python versions](https://img.shields.io/pypi/pyversions/native-file-dialog?logo=python&logoColor=white)](https://pypi.org/project/native-file-dialog/)
 [![License](https://img.shields.io/pypi/l/native-file-dialog)](https://github.com/sherpya/native-file-dialog/blob/master/LICENSE)
 [![CI](https://github.com/sherpya/native-file-dialog/actions/workflows/release.yml/badge.svg)](https://github.com/sherpya/native-file-dialog/actions/workflows/release.yml)
 
