@@ -6,7 +6,10 @@ RUN apt-get update && apt-get install -y \
     build-essential cmake \
     qt6-base-dev
 
+# The official Python image owns /usr/local; no distro Python is modified.
+ENV PIP_ROOT_USER_ACTION=ignore
+
 RUN python -m pip install --upgrade pip && \
-    python -m pip install build scikit-build-core pybind11
+    python -m pip install build scikit-build-core auditwheel patchelf twine pybind11
 
 WORKDIR /project

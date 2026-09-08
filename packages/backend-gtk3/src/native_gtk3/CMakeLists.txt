@@ -1,6 +1,6 @@
 # GTK3 file dialog extension (Linux only).
 # Shared C source with backend-gtk; built without NFD_USE_GTK4.
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
 project(native_gtk3 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
@@ -11,7 +11,7 @@ set(NFD_SHARED_SRC "${CMAKE_CURRENT_SOURCE_DIR}/../../../backend-gtk/src/native_
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK3 REQUIRED gtk+-3.0>=3.20)
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
 
 add_library(_native_gtk3 MODULE ${NFD_SHARED_SRC})
 target_include_directories(_native_gtk3 PRIVATE
@@ -20,7 +20,7 @@ target_include_directories(_native_gtk3 PRIVATE
 )
 target_link_libraries(_native_gtk3 PRIVATE
   ${GTK3_LIBRARIES}
-  Python3::Python
+  Python3::Module
 )
 target_compile_options(_native_gtk3 PRIVATE ${GTK3_CFLAGS_OTHER})
 

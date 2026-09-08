@@ -1,6 +1,7 @@
 /*
  * Minimal Qt6 file dialog for native_file_dialog (open/save, single and multiple).
  * Uses Qt6 Core, Gui, Widgets only (no KF6).
+ * Copyright (c) Gianluigi Tiesi <sherpya@gmail.com>
  * SPDX-License-Identifier: MIT
  */
 

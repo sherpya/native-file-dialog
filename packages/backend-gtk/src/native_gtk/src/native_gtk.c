@@ -1,6 +1,7 @@
 /*
  * Native file dialog for native_file_dialog.
  * GTK4/libadwaita (NFD_USE_GTK4) or GTK3.
+ * Copyright (c) Gianluigi Tiesi <sherpya@gmail.com>
  * SPDX-License-Identifier: MIT
  */
 

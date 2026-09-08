@@ -5,7 +5,10 @@ RUN apt-get update && apt-get install -y \
     build-essential cmake pkg-config \
     libgtk-3-dev
 
+# The official Python image owns /usr/local; no distro Python is modified.
+ENV PIP_ROOT_USER_ACTION=ignore
+
 RUN python -m pip install --upgrade pip && \
-    python -m pip install build scikit-build-core
+    python -m pip install build scikit-build-core auditwheel patchelf twine
 
 WORKDIR /packages/backend-gtk3

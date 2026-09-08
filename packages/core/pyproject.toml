@@ -1,7 +1,22 @@
 [project]
 name = "native-file-dialog"
+description = "Cross-platform native file dialogs for Python"
+readme = "README.md"
+authors = [
+  { name = "Gianluigi Tiesi", email = "sherpya@gmail.com" },
+]
+license = "MIT"
+license-files = ["LICENSE"]
 dynamic = ["version"]
 requires-python = ">=3.11"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
 dependencies = [
   "native-file-dialog-gtk; sys_platform == 'linux'",
   "native-file-dialog-gtk3; sys_platform == 'linux'",

@@ -10,8 +10,8 @@ jobs:
   core:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Build core sdist and wheel
@@ -19,7 +19,7 @@ jobs:
           python -m pip install --upgrade pip build
           python -m build
         working-directory: packages/core
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: core-dist
           path: packages/core/dist/*
@@ -31,7 +31,7 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build GTK4 wheel in Docker
         run: |
           docker build \
@@ -40,9 +40,10 @@ jobs:
             -t nfd-gtk:${{ matrix.python-version }} .
           docker run --rm \
             -v "$PWD/packages:/packages" \
+            -v "$PWD/scripts:/scripts:ro" \
             nfd-gtk:${{ matrix.python-version }} \
-            python -m build --wheel
-      - uses: actions/upload-artifact@v4
+            python /scripts/build_linux_wheel.py gtk --plat manylinux_2_34_x86_64
+      - uses: actions/upload-artifact@v7
         if: ${{ env.ACT != 'true' }}
         with:
           name: gtk-dist-${{ matrix.python-version }}
@@ -55,7 +56,7 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build GTK3 wheel in Docker
         run: |
           docker build \
@@ -64,9 +65,10 @@ jobs:
             -t nfd-gtk3:${{ matrix.python-version }} .
           docker run --rm \
             -v "$PWD/packages:/packages" \
+            -v "$PWD/scripts:/scripts:ro" \
             nfd-gtk3:${{ matrix.python-version }} \
-            python -m build --wheel
-      - uses: actions/upload-artifact@v4
+            python /scripts/build_linux_wheel.py gtk3 --plat manylinux_2_34_x86_64
+      - uses: actions/upload-artifact@v7
         if: ${{ env.ACT != 'true' }}
         with:
           name: gtk3-dist-${{ matrix.python-version }}
@@ -79,7 +81,7 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build Qt wheel in Docker
         run: |
           docker build \
@@ -88,26 +90,74 @@ jobs:
             -t nfd-qt:${{ matrix.python-version }} .
           docker run --rm \
             -v "$PWD/packages/backend-qt:/project" \
+            -v "$PWD/scripts:/scripts:ro" \
             nfd-qt:${{ matrix.python-version }} \
-            python -m build
-      - uses: actions/upload-artifact@v4
+            python /scripts/build_linux_wheel.py qt --plat manylinux_2_34_x86_64
+      - uses: actions/upload-artifact@v7
         if: ${{ env.ACT != 'true' }}
         with:
           name: qt-dist-${{ matrix.python-version }}
           path: packages/backend-qt/dist/*
 
-  publish:
+  fallback:
     runs-on: ubuntu-latest
     needs: [core, gtk, gtk3, qt]
-    permissions:
-      id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: "*-dist*"
           path: dist
           merge-multiple: true
+      - name: Install wheels without GTK or Qt and check Tk fallback
+        run: |
+          docker run --rm \
+            -e PIP_ROOT_USER_ACTION=ignore \
+            -v "$PWD/dist:/wheels:ro" \
+            python:3.14-slim-bookworm sh -ec '
+              apt-get update
+              apt-get install -y --no-install-recommends libtk8.6
+              python -m pip install --no-index --only-binary=:all: --find-links=/wheels native-file-dialog
+              python -c "import native_file_dialog as nfd; backend = nfd.get_backend(); print(backend.__name__); assert backend.__name__ == \"native_file_dialog.backends.tk\""
+            '
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [core, gtk, gtk3, qt, fallback]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: native-file-dialog
+            environment: native-file-dialog
+            artifacts: core-dist
+          - package: native-file-dialog-gtk
+            environment: native-file-dialog-gtk
+            artifacts: gtk-dist-*
+          - package: native-file-dialog-gtk3
+            environment: native-file-dialog-gtk3
+            artifacts: gtk3-dist-*
+          - package: native-file-dialog-qt
+            environment: native-file-dialog-qt
+            artifacts: qt-dist-*
+    # A distinct OIDC identity lets PyPI create each pending project separately.
+    environment: ${{ matrix.environment }}
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: ${{ matrix.artifacts }}
+          path: dist
+          merge-multiple: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - name: Validate package metadata
+        run: |
+          python -m pip install --upgrade twine
+          python -m twine check --strict dist/*
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+          skip-existing: true

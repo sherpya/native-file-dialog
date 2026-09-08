@@ -1,8 +1,9 @@
 # native-file-dialog
 
-![Python 3.11+](https://img.shields.io/badge/python-3.11%20|%203.12%20|%203.13%20|%203.14-blue)
-![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![Platform: Linux | macOS | Windows](https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20Windows-lightgrey)
+[![PyPI](https://img.shields.io/pypi/v/native-file-dialog)](https://pypi.org/project/native-file-dialog/)
+[![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https://raw.githubusercontent.com/sherpya/native-file-dialog/master/packages/core/pyproject.toml)](https://pypi.org/project/native-file-dialog/)
+[![License](https://img.shields.io/pypi/l/native-file-dialog)](https://github.com/sherpya/native-file-dialog/blob/master/LICENSE)
+[![CI](https://github.com/sherpya/native-file-dialog/actions/workflows/release.yml/badge.svg)](https://github.com/sherpya/native-file-dialog/actions/workflows/release.yml)
 
 This repository builds and publishes four packages:
 

@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 project(native_qt LANGUAGES CXX)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+set(PYBIND11_FINDPYTHON ON)
 find_package(pybind11 CONFIG QUIET)
 if(NOT pybind11_FOUND)
   find_package(pybind11 REQUIRED)
